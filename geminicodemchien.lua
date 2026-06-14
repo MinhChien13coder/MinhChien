@@ -1,3 +1,10 @@
+Chờ cho đến khi game load hoàn toàn
+repeat task.wait() until game:IsLoaded()
+
+-- Thêm một khoảng trễ nhỏ để qua mặt lượt quét đầu tiên của Anti-Cheat
+task.wait(3) 
+
+-- Bắt đầu khởi tạo Menu và các chức năng
 -- ================= KHỞI TẠO BẢO VỆ & AN TOÀN SERVICE =================
 local function SafeGetService(serviceName)
     local success, service = pcall(game.GetService, game, serviceName)
