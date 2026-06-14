@@ -1006,7 +1006,7 @@ openSpyBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local success, err = pcall(function()
 -- Dùng RedzHub SimpleSpyMobile thay vì bản PC
-            loadstring(game:HttpGet("https://pastefy.app/Wqc5ypyr/raw"))()
+            loadstring(game:HttpGet("https://pastefy.app/6nDkQPNr/raw"))()
             end)
         if not success then
         openSpyBtn.Text = "❌ LỖI TẢI SPY!"
