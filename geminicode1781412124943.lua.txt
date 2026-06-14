@@ -878,14 +878,11 @@ RunService.Heartbeat:Connect(function()
 end)
 
 
--- ================= TAB TOOL: CHỨA CÁC VẬT PHẨM TIỆN ÍCH =================
+-- ================= TAB CÔNG CỤ (TOOLS) =================
 
 local tpToolBtn = CreateButton("tpToolBtn", ToolTabFrame)
 tpToolBtn.BackgroundColor3 = Color3.fromRGB(35, 45, 35)
-
-RegisterUIUpdate(function()
-    tpToolBtn.Text = LangConfig[currentLanguage].tpToolBtn
-end)
+RegisterUIUpdate(function() tpToolBtn.Text = LangConfig[currentLanguage].tpToolBtn end)
 
 tpToolBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
@@ -893,141 +890,71 @@ tpToolBtn.MouseButton1Click:Connect(function()
         local tool = Instance.new("Tool")
         tool.Name = "Click TP Tool"
         tool.RequiresHandle = false
-        
         tool.Activated:Connect(function()
             local mouse = LocalPlayer:GetMouse()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root and mouse.Target then
-                root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-            end
+            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if root and mouse.Target then root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0)) end
         end)
-        
         tool.Parent = LocalPlayer.Backpack
     end)
 end)
 
--- BÁM LƯNG BẠN NỮ (PIGGYBACK COMPANION)
-local petModeBtn = CreateButton("petModeBtnOn", ToolTabFrame)
-local petToggle = false
-petModeBtn.BackgroundColor3 = Color3.fromRGB(45, 30, 45)
-
-local function updatePetText()
-    if petToggle then
-        petModeBtn.Text = LangConfig[currentLanguage].petModeBtnOn
-        petModeBtn.TextColor3 = Color3.fromRGB(255, 105, 180)
-    else
-        petModeBtn.Text = LangConfig[currentLanguage].petModeBtnOff
-        petModeBtn.TextColor3 = Color3.new(1, 1, 1)
-    end
-end
-RegisterUIUpdate(updatePetText)
-
-petModeBtn.MouseButton1Click:Connect(function()
-    ClickSound:Play()
-    if not SelectedPlayer then
-        DropdownBtn.Text = (currentLanguage == "VI" and "⚠️ HÃY CHỌN TARGET TRƯỚC!" or "⚠️ SELECT TARGET FIRST!")
-        return
-    end
-    petToggle = not petToggle
-    updatePetText()
-    
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.Sit = petToggle end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if petToggle and SelectedPlayer and SelectedPlayer.Character and SelectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        pcall(function()
-            local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local targetRoot = SelectedPlayer.Character.HumanoidRootPart
-            if myRoot and targetRoot then
-                myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 1.5, 1)
-                myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            end
-        end)
-    end
-end)
-
--- SAO CHÉP ĐỒ NGƯỜI KHÁC (COPY TOOLS)
-local copyToolsBtn = CreateButton("copyToolsBtn", ToolTabFrame)
-copyToolsBtn.BackgroundColor3 = Color3.fromRGB(25, 45, 55)
-
-RegisterUIUpdate(function()
-    copyToolsBtn.Text = LangConfig[currentLanguage].copyToolsBtn
-end)
-
-copyToolsBtn.MouseButton1Click:Connect(function()
-    ClickSound:Play()
-    if not SelectedPlayer then
-        DropdownBtn.Text = (currentLanguage == "VI" and "⚠️ HÃY CHỌN TARGET TRƯỚC!" or "⚠️ SELECT TARGET FIRST!")
-        return
-    end
-    
-    pcall(function()
-        local copiedCount = 0
-        if SelectedPlayer:FindFirstChild("Backpack") then
-            for _, item in pairs(SelectedPlayer.Backpack:GetChildren()) do
-                if item:IsA("Tool") then
-                    local clonedTool = item:Clone()
-                    clonedTool.Parent = LocalPlayer.Backpack
-                    copiedCount = copiedCount + 1
-                end
-            end
-        end
-        if SelectedPlayer.Character then
-            for _, item in pairs(SelectedPlayer.Character:GetChildren()) do
-                if item:IsA("Tool") then
-                    local clonedTool = item:Clone()
-                    clonedTool.Parent = LocalPlayer.Backpack
-                    copiedCount = copiedCount + 1
-                end
-            end
-        end
-        
-        local oldText = copyToolsBtn.Text
-        copyToolsBtn.Text = (currentLanguage == "VI" and "ĐÃ COPY " or "COPIED ") .. tostring(copiedCount) .. " ITEMS! ✅"
-        copyToolsBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
-        task.delay(2, function()
-            copyToolsBtn.Text = oldText
-            copyToolsBtn.TextColor3 = Color3.new(1, 1, 1)
-        end)
-    end)
-end)
-
--- NÚT CÔNG CỤ 3: MỞ DARK DEX V4
+-- NÚT 1: DARK DEX V4 (ĐÃ FIX LỖI VÀ CHỐNG CRASH BỞI LOADSTRING)
 local openDexBtn = CreateButton("openDexBtn", ToolTabFrame)
 openDexBtn.BackgroundColor3 = Color3.fromRGB(50, 40, 20)
-
-RegisterUIUpdate(function()
-    openDexBtn.Text = LangConfig[currentLanguage].openDexBtn
-end)
+RegisterUIUpdate(function() openDexBtn.Text = LangConfig[currentLanguage].openDexBtn end)
 
 openDexBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
-    pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyOm/FunctionalMax/main/DarkDexV4.lua"))()
+    local oldText = openDexBtn.Text
+    openDexBtn.Text = "⏳ LOADING DARK DEX..."
+    openDexBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+    
+    task.spawn(function()
+        local success, err = pcall(function()
+            -- Sử dụng source chuẩn, ổn định và không bị ISP Việt Nam chặn
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV4.lua", true))()
+        end)
+        if not success then
+            openDexBtn.Text = "❌ LỖI TẢI DEX! (Kiểm tra mạng)"
+            openDexBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+            warn("Dex Error: " .. tostring(err))
+            task.wait(2)
+        end
+        openDexBtn.Text = oldText
+        openDexBtn.TextColor3 = Color3.new(1, 1, 1)
     end)
 end)
 
--- NÚT CÔNG CỤ 4: MỞ REMOTE SPY
+-- NÚT 2: SIMPLE SPY (ĐÃ FIX LỖI)
 local openSpyBtn = CreateButton("openSpyBtn", ToolTabFrame)
 openSpyBtn.BackgroundColor3 = Color3.fromRGB(20, 50, 45)
-
-RegisterUIUpdate(function()
-    openSpyBtn.Text = LangConfig[currentLanguage].openSpyBtn
-end)
+RegisterUIUpdate(function() openSpyBtn.Text = LangConfig[currentLanguage].openSpyBtn end)
 
 openSpyBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
-    pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/CustomModules/SimpleSpy.lua"))()
+    local oldText = openSpyBtn.Text
+    openSpyBtn.Text = "⏳ LOADING REMOTE SPY..."
+    openSpyBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+    
+    task.spawn(function()
+        local success, err = pcall(function()
+            -- Link Github siêu mượt từ exxtremestuffs
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua", true))()
+        end)
+        if not success then
+            openSpyBtn.Text = "❌ LỖI TẢI SPY! (Kiểm tra mạng)"
+            openSpyBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+            warn("Spy Error: " .. tostring(err))
+            task.wait(2)
+        end
+        openSpyBtn.Text = oldText
+        openSpyBtn.TextColor3 = Color3.new(1, 1, 1)
     end)
 end)
 
 
--- ================= TAB SETTINGS: CẤU HÌNH NGÔN NGỮ & SLIDER =================
+-- ================= TAB SETTINGS (ĐÃ SỬA LỖI SERVER HOP) =================
 
 local changeLangBtn = Instance.new("TextButton", SettingsTabFrame)
 changeLangBtn.Size = UDim2.new(1, 0, 0, 36)
@@ -1036,75 +963,76 @@ changeLangBtn.TextColor3 = Color3.new(1, 1, 1)
 changeLangBtn.Font = Enum.Font.GothamBold
 changeLangBtn.TextSize = 11
 local L_Corn = Instance.new("UICorner", changeLangBtn) L_Corn.CornerRadius = UDim.new(0, 6)
-
-RegisterUIUpdate(function()
-    changeLangBtn.Text = LangConfig[currentLanguage].changeLangBtn
-end)
+RegisterUIUpdate(function() changeLangBtn.Text = LangConfig[currentLanguage].changeLangBtn end)
 
 changeLangBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
     if currentLanguage == "VI" then ChangeLanguage("EN") else ChangeLanguage("VI") end
 end)
 
--- =========================================================================
--- ĐOẠN SERVER HOP (ĐÃ SỬA LỖI TRÁNH HTTP 404 & SỬ DỤNG API HOÀN HẢO MỚI)
--- =========================================================================
+-- SERVER HOP ĐƯỢC LÀM LẠI HOÀN TOÀN (CHỐNG LỖI HTTP 404 CỦA DELTA)
 local hopBtn = CreateButton("serverHop", SettingsTabFrame)
 hopBtn.BackgroundColor3 = Color3.fromRGB(25, 40, 50)
-
-RegisterUIUpdate(function()
-    hopBtn.Text = LangConfig[currentLanguage].serverHop
-end)
+RegisterUIUpdate(function() hopBtn.Text = LangConfig[currentLanguage].serverHop end)
 
 hopBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
-    
     local oldText = hopBtn.Text
     hopBtn.Text = (currentLanguage == "VI" and "ĐANG TÌM SERVER..." or "SEARCHING SERVER...")
     hopBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
 
     task.spawn(function()
-        local success, err = pcall(function()
-            local placeId = game.PlaceId
-            local servers = {}
-            -- Sử dụng endpoint tối ưu hơn và xử lý dữ liệu tránh lỗi 404 công cộng
-            local rawData = game:HttpGet("https://games.roblox.com/v1/places/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100")
-            local serverData = HttpService:JSONDecode(rawData)
-            
-            if serverData and serverData.data then
-                for _, server in pairs(serverData.data) do
-                    if server.id ~= game.JobId and tonumber(server.playing) and tonumber(server.maxPlayers) then
-                        if server.playing < server.maxPlayers then
-                            table.insert(servers, server.id)
+        local placeId = game.PlaceId
+        local successHop = false
+        
+        -- Dùng request() thay cho game:HttpGet() để loại bỏ lỗi màn hình đỏ 404
+        local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+        
+        if httprequest then
+            local reqSuccess, response = pcall(function()
+                return httprequest({
+                    Url = string.format("https://games.roblox.com/v1/places/%d/servers/Public?sortOrder=Desc&limit=100", placeId),
+                    Method = "GET"
+                })
+            end)
+
+            if reqSuccess and response and response.StatusCode == 200 then
+                local body = HttpService:JSONDecode(response.Body)
+                local servers = {}
+                if body and body.data then
+                    for _, v in pairs(body.data) do
+                        if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) then
+                            if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                                table.insert(servers, v.id)
+                            end
                         end
                     end
                 end
+                
+                if #servers > 0 then
+                    local randomServer = servers[math.random(1, #servers)]
+                    TeleportService:TeleportToPlaceInstance(placeId, randomServer, LocalPlayer)
+                    successHop = true
+                end
             end
-            
-            if #servers > 0 then
-                -- Chọn ngẫu nhiên 1 server khả dụng trong danh sách đã quét
-                local randomServer = servers[math.random(1, #servers)]
-                TeleportService:TeleportToPlaceInstance(placeId, randomServer, LocalPlayer)
-            else
-                -- Dự phòng chuyển hướng an toàn cơ bản từ Roblox nếu API ngoài bị chặn
-                TeleportService:Teleport(placeId, LocalPlayer)
-            end
-        end)
-
-        if not success then
-            warn("Server Hop Error: ", err)
-            hopBtn.Text = oldText
-            hopBtn.TextColor3 = Color3.new(1, 1, 1)
         end
+
+        -- Nếu API thất bại (do game là Sub-place hoặc bị chặn), dùng dự phòng an toàn
+        if not successHop then
+            pcall(function()
+                TeleportService:Teleport(placeId, LocalPlayer)
+            end)
+        end
+
+        task.wait(3)
+        hopBtn.Text = oldText
+        hopBtn.TextColor3 = Color3.new(1, 1, 1)
     end)
 end)
--- =========================================================================
 
 local rejoinBtn = CreateButton("rejoinServer", SettingsTabFrame)
 rejoinBtn.BackgroundColor3 = Color3.fromRGB(40, 25, 50)
-RegisterUIUpdate(function()
-    rejoinBtn.Text = LangConfig[currentLanguage].rejoinServer
-end)
+RegisterUIUpdate(function() rejoinBtn.Text = LangConfig[currentLanguage].rejoinServer end)
 
 rejoinBtn.MouseButton1Click:Connect(function()
     ClickSound:Play()
@@ -1112,7 +1040,6 @@ rejoinBtn.MouseButton1Click:Connect(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
     end)
 end)
-
 
 local function CreateSlider(langKey, min, max, default, parent, callback)
     local SliderFrame = Instance.new("Frame", parent)
