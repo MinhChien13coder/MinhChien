@@ -1121,7 +1121,7 @@ task.spawn(function()
 end)
 
 -- NÚT MỞ MENU
-local Icon = Instance.new("Frame", ScreenGui); Icon.Size = UDim2.new(0, 60, 0, 60); Icon.Position = UDim2.new(0, 10, 0.5, 7); Icon.BackgroundColor3 = Color3.new(0,0,0); Icon.Active = true; Drag(Icon)
+local Icon = Instance.new("Frame", ScreenGui); Icon.Size = UDim2.new(0, 60, 0, 60); Icon.Position = UDim2.new(0, 10, 0, 7); Icon.BackgroundColor3 = Color3.new(0,0,0); Icon.Active = true; Drag(Icon)
 Instance.new("UICorner", Icon).CornerRadius = UDim.new(1, 0)
 local IconStroke = Instance.new("UIStroke", Icon); IconStroke.Thickness = 3; task.spawn(function() while task.wait(0.01) do IconStroke.Color = Color3.fromHSV(tick() % 5 / 5, 1, 1) end end)
 local IconBtn = Instance.new("TextButton", Icon); IconBtn.Size = UDim2.new(1, 0, 1, 0); IconBtn.BackgroundTransparency = 1; IconBtn.Text = "MENU"; IconBtn.TextColor3 = Color3.new(1,1,1); IconBtn.Font = Enum.Font.GothamBold
