@@ -34,7 +34,7 @@ local Config = {
     Distance = 5,
     ResetTele = false,
     LockCFrame = false,      -- Khóa tọa độ
-    LockOffset = 5,          -- Khoảng cách trên đầu quái
+    LockOffset = 13,          -- Khoảng cách trên đầu quái
 }
 
 _G.AutoFarm = false
@@ -786,7 +786,7 @@ end)
 
 -- [[ KILL AURA ]]
 task.spawn(function()
-    while task.wait(0.25) do
+    while task.wait(0.01) do
         pcall(function()
             if getgenv()._G.KillAura then
                 local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -800,6 +800,42 @@ task.spawn(function()
                         end
                     end
                 end
+            end
+        end)
+    end
+end)
+
+-- =========================================================
+-- ============ RESET TELE ĐỘC LẬP (CHẠY NGẦM) ============
+-- =========================================================
+task.spawn(function()
+    while task.wait(1) do  -- kiểm tra mỗi giây
+        pcall(function()
+            if not Config.ResetTele then return end
+            local char = LocalPlayer.Character
+            if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            -- Lấy thông tin nhiệm vụ hiện tại
+            local questGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+            if not questGui then return end
+            local questContainer = questGui:FindFirstChild("Quest")
+            if not questContainer then return end
+            if questContainer.Visible == false then return end  -- chưa nhận quest
+
+            -- Gọi CheckQuest() để cập nhật CFrameQuest và CFrameMon
+            CheckQuest()
+            if not CFrameQuest and not CFrameMon then return end
+
+            -- Ưu tiên reset về vị trí quái (nếu có), ngược lại về nơi nhận quest
+            local targetCF = CFrameMon or CFrameQuest
+            if not targetCF then return end
+
+            local dist = (root.Position - targetCF.Position).Magnitude
+            if dist > 500 then
+                ResetTele(targetCF)
+                task.wait(0.5)  -- chờ hồi sinh
             end
         end)
     end
@@ -1121,7 +1157,7 @@ task.spawn(function()
 end)
 
 -- NÚT MỞ MENU
-local Icon = Instance.new("Frame", ScreenGui); Icon.Size = UDim2.new(0, 60, 0, 60); Icon.Position = UDim2.new(0, 10, 0, 7); Icon.BackgroundColor3 = Color3.new(0,0,0); Icon.Active = true; Drag(Icon)
+local Icon = Instance.new("Frame", ScreenGui); Icon.Size = UDim2.new(0, 60, 0, 60); Icon.Position = UDim2.new(0, 10, 0.5, 7); Icon.BackgroundColor3 = Color3.new(0,0,0); Icon.Active = true; Drag(Icon)
 Instance.new("UICorner", Icon).CornerRadius = UDim.new(1, 0)
 local IconStroke = Instance.new("UIStroke", Icon); IconStroke.Thickness = 3; task.spawn(function() while task.wait(0.01) do IconStroke.Color = Color3.fromHSV(tick() % 5 / 5, 1, 1) end end)
 local IconBtn = Instance.new("TextButton", Icon); IconBtn.Size = UDim2.new(1, 0, 1, 0); IconBtn.BackgroundTransparency = 1; IconBtn.Text = "MENU"; IconBtn.TextColor3 = Color3.new(1,1,1); IconBtn.Font = Enum.Font.GothamBold
