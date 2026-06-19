@@ -1,0 +1,203 @@
+-- ServerHopModule.lua
+-- ModuleScript dành cho Server Hop sử dụng TeleportService:TeleportAsync + TeleportOptions
+-- Yêu cầu: chạy trên server (Script trong ServerScriptService)
+-- API chính: ServerHop.Hop(playersOrPlayer, placeId, opts)
+-- opts (tùy chọn):
+--   .teleportData = table,             -- data thêm vào TeleportOptions:SetTeleportData
+--   .reserveServer = boolean,           -- đặt ShouldReserveServer = true
+--   .maxRetries = number,               -- số lần thử (mặc định 5)
+--   .baseBackoff = number,              -- base backoff (s) (mặc định 1)
+--   .tokenTTL = number,                 -- thời gian hợp lệ của token (s) (mặc định 60)
+--   .useDataStoreToken = boolean        -- nếu true sẽ ghi token vào DataStore để kiểm tra ở server đích
+-- Trả về: success(boolean), message(string)
+
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local DataStoreService = game:GetService("DataStoreService")
+
+local ServerHop = {}
+ServerHop.__index = ServerHop
+
+-- cấu hình mặc định
+local DEFAULTS = {
+    maxRetries = 5,
+    baseBackoff = 1,
+    tokenTTL = 60,
+    useDataStoreToken = false, -- false mặc định; bật nếu muốn lưu token để verify giữa servers (cần xử lý DataStore)
+    dataStoreName = "ServerHopTeleportTokens",
+}
+
+-- helper: normalize players input -> array of Player
+local function normalizePlayers(input)
+    if typeof(input) == "Instance" and input:IsA("Player") then
+        return {input}
+    elseif type(input) == "table" then
+        local out = {}
+        for _, v in ipairs(input) do
+            if typeof(v) == "Instance" and v:IsA("Player") then
+                table.insert(out, v)
+            end
+        end
+        return out
+    end
+    return nil
+end
+
+-- helper: create short-lived token and (optionally) store into DataStore
+local function createTeleportToken(config, players)
+    local token = HttpService:GenerateGUID(false) -- e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+    local payload = {
+        token = token,
+        created = os.time(),
+        expires = os.time() + (config.tokenTTL or DEFAULTS.tokenTTL),
+        players = {}
+    }
+    for _, p in ipairs(players) do
+        table.insert(payload.players, {UserId = p.UserId, Name = p.Name})
+    end
+
+    if config.useDataStoreToken then
+        -- lưu vào DataStore để server đích verify nhanh
+        local ok, dsErr = pcall(function()
+            local ds = DataStoreService:GetDataStore(config.dataStoreName or DEFAULTS.dataStoreName)
+            -- Lưu dạng key: "teleport_"..token, value: JSON của payload
+            ds:SetAsync("teleport_" .. token, HttpService:JSONEncode(payload))
+        end)
+        if not ok then
+            -- không nên block teleport chỉ vì DataStore thất bại - tùy chọn cấu hình
+            warn("[ServerHop] Failed to write teleport token to DataStore:", dsErr)
+        end
+    end
+
+    return token, payload
+end
+
+-- helper: optional cleanup token from DataStore (best-effort)
+local function cleanupTeleportToken(config, token)
+    if not config.useDataStoreToken then return end
+    pcall(function()
+        local ds = DataStoreService:GetDataStore(config.dataStoreName or DEFAULTS.dataStoreName)
+        ds:RemoveAsync("teleport_" .. token)
+    end)
+end
+
+-- Validate players: đảm bảo vẫn còn trong game và hợp lệ theo chính sách server (ví dụ blacklist, banned, anti-cheat flags)
+-- Trả về: validPlayers(table) hoặc nil + message
+local function validatePlayersBeforeTeleport(players)
+    local okPlayers = {}
+    for _, p in ipairs(players) do
+        if not p or not p.Parent then
+            return nil, ("Player %s is no longer in game"):format(tostring(p and p.Name or "unknown"))
+        end
+        -- Ví dụ: kiểm tra property do bạn implement: p:GetAttribute("Banned") etc.
+        if p:GetAttribute("Banned") then
+            return nil, ("Player %s is banned"):format(p.Name)
+        end
+        -- Thêm các kiểm tra anti-cheat server-side khác ở đây (account age, group membership, last heartbeat, etc.)
+        table.insert(okPlayers, p)
+    end
+    return okPlayers
+end
+
+-- Kiểm tra lỗi trả về (chuỗi) để phân loại
+local function classifyTeleportError(err)
+    local s = tostring(err):lower()
+    if string.find(s, "429") or string.find(s, "too many requests") or string.find(s, "rate") then
+        return "ratelimit"
+    elseif string.find(s, "610") or string.find(s, "611") or string.find(s, "full") or string.find(s, "server full") then
+        return "serverfull"
+    else
+        return "other"
+    end
+end
+
+-- Public API: Hop
+function ServerHop.Hop(playersOrPlayer, placeId, opts)
+    opts = opts or {}
+    local config = {}
+    for k,v in pairs(DEFAULTS) do config[k] = v end
+    for k,v in pairs(opts) do config[k] = v end
+
+    local players = normalizePlayers(playersOrPlayer)
+    if not players or #players == 0 then
+        return false, "No valid players provided"
+    end
+
+    -- validate players according to server rules (anti-cheat)
+    local validPlayers, errMsg = validatePlayersBeforeTeleport(players)
+    if not validPlayers then
+        return false, "Validation failed: " .. tostring(errMsg)
+    end
+
+    -- tạo teleport options
+    local teleportOptions = Instance.new("TeleportOptions")
+    if config.reserveServer then
+        -- gợi ý: reserve server nếu bạn muốn riêng tư
+        teleportOptions.ShouldReserveServer = true
+    end
+
+    -- tạo token & set vào teleportData
+    local token, payload = createTeleportToken(config, players)
+    local teleportData = config.teleportData or {}
+    teleportData.__serverhop_token = token
+    teleportData.__serverhop_from = tostring(game.JobId or "unknown") -- JobId dùng để debug
+    teleportOptions:SetTeleportData(teleportData)
+
+    -- retry loop với pcall + backoff ngẫu nhiên
+    local attempt = 0
+    local maxAttempts = config.maxRetries or DEFAULTS.maxRetries
+    local baseBackoff = config.baseBackoff or DEFAULTS.baseBackoff
+    local rng = Random.new()
+
+    while attempt < maxAttempts do
+        attempt = attempt + 1
+        local ok, err = pcall(function()
+            -- TeleportAsync sẽ ném lỗi nếu thất bại -> pcall catch
+            TeleportService:TeleportAsync(placeId, players, teleportOptions)
+        end)
+
+        if ok then
+            -- Thường thì khi TeleportAsync thành công, players được teleport và script server hiện tại không còn quyền trên player đó
+            -- Chúng ta có thể xóa token khỏi datastore để tránh reuse
+            cleanupTeleportToken(config, token)
+            return true, "Teleport initiated"
+        else
+            local kind = classifyTeleportError(err)
+            warn(("[ServerHop] Teleport attempt %d/%d failed (%s): %s"):format(attempt, maxAttempts, kind, tostring(err)))
+
+            -- xử lý tùy loại lỗi
+            local waitTime
+            if kind == "ratelimit" then
+                -- nếu rate limit, backoff dài hơn
+                waitTime = baseBackoff * (2 ^ (attempt - 1)) -- exponential backoff
+                -- thêm jitter
+                waitTime = waitTime + rng:NextNumber(0, baseBackoff)
+            elseif kind == "serverfull" then
+                -- server full: thử nhanh hơn nhưng vẫn random một chút
+                waitTime = rng:NextNumber(0.5, math.max(1, baseBackoff))
+            else
+                -- lỗi khác: cố gắng nhẹ nhàng
+                waitTime = rng:NextNumber(0.5, baseBackoff * 1.5)
+            end
+
+            -- chờ với task.wait để tương thích với Task Scheduler
+            task.wait(waitTime)
+
+            -- trước khi retry, re-validate players vẫn hợp lệ
+            local stillValid, vErr = validatePlayersBeforeTeleport(players)
+            if not stillValid then
+                -- abort nếu players không còn hợp lệ
+                cleanupTeleportToken(config, token)
+                return false, "Aborted before retry: " .. tostring(vErr)
+            end
+            -- tiếp loop để retry
+        end
+    end
+
+    -- hết lượt retry
+    cleanupTeleportToken(config, token)
+    return false, "All teleport attempts failed after " .. tostring(maxAttempts)
+end
+
+return ServerHop
