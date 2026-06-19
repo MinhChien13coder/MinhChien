@@ -104,7 +104,7 @@ function RedzUiEngine:CreateWindow()
     MobileToggle.Position = UDim2.new(0, 10, 0, 80)
     MobileToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     MobileToggle.Image = "rbxassetid://74840524656036"
-    MobileToggle.ImageColor3 = Color3.fromRGB(255, 30, 60)
+    MobileToggle.ImageColor3 = Color3.fromRGB(255, 255, 255)
     MobileToggle.ScaleType = Enum.ScaleType.Stretch
     MobileToggle.Active = true
     MobileToggle.Draggable = true
