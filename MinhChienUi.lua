@@ -2,6 +2,8 @@ local RedzUiEngine = {}
 local openState = true
 
 function RedzUiEngine:CreateWindow()
+    local CoreGui = game:GetService("CoreGui") 
+
     if CoreGui:FindFirstChild("MinhChienDev") then
         CoreGui:FindFirstChild("MinhChienDev"):Destroy()
     end
@@ -9,7 +11,7 @@ function RedzUiEngine:CreateWindow()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "MinhChienDev"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = CoreGui
+    ScreenGui.Parent = CoreGui  
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
