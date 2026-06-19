@@ -2,16 +2,20 @@ local RedzUiEngine = {}
 local openState = true
 
 function RedzUiEngine:CreateWindow()
-    local CoreGui = game:GetService("CoreGui") 
+    -- SỬA LỖI: Dùng PlayerGui thay vì CoreGui
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    if not player then return end  
+    local playerGui = player:WaitForChild("PlayerGui")
 
-    if CoreGui:FindFirstChild("MinhChienDev") then
-        CoreGui:FindFirstChild("MinhChienDev"):Destroy()
+    if playerGui:FindFirstChild("MinhChienDev") then
+        playerGui:FindFirstChild("MinhChienDev"):Destroy()
     end
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "MinhChienDev"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = CoreGui  
+    ScreenGui.Parent = playerGui  
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
@@ -93,31 +97,32 @@ function RedzUiEngine:CreateWindow()
     ContentContainer.BackgroundTransparency = 1
     ContentContainer.Parent = MainFrame
 
+    -- ĐÃ SỬA THÀNH ImageButton VỚI ẢNH TỪ rbxassetid
     local MobileToggle = Instance.new("ImageButton")
-   MobileToggle.Name = "MinhChienDev"
-   MobileToggle.Size = UDim2.new(0, 50, 0, 50)
-   MobileToggle.Position = UDim2.new(0, 10, 0, 80)
-   MobileToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-   MobileToggle.Image = "rbxassetid://74840524656036"
-   MobileToggle.ImageColor3 = Color3.fromRGB(255, 30, 60)   -- tùy chỉnh màu ảnh (có thể bỏ nếu muốn giữ nguyên màu gốc)
-   MobileToggle.ScaleType = Enum.ScaleType.Stretch          -- kéo ảnh vừa khung (có thể dùng Fit nếu muốn giữ tỉ lệ)
-   MobileToggle.Active = true
-   MobileToggle.Draggable = true
-   MobileToggle.Parent = ScreenGui
+    MobileToggle.Name = "MinhChienDev"
+    MobileToggle.Size = UDim2.new(0, 50, 0, 50)
+    MobileToggle.Position = UDim2.new(0, 10, 0, 80)
+    MobileToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    MobileToggle.Image = "rbxassetid://74840524656036"
+    MobileToggle.ImageColor3 = Color3.fromRGB(255, 30, 60)
+    MobileToggle.ScaleType = Enum.ScaleType.Stretch
+    MobileToggle.Active = true
+    MobileToggle.Draggable = true
+    MobileToggle.Parent = ScreenGui
 
-   local MobileCorner = Instance.new("UICorner")
-   MobileCorner.CornerRadius = UDim.new(0, 25)
-  MobileCorner.Parent = MobileToggle
+    local MobileCorner = Instance.new("UICorner")
+    MobileCorner.CornerRadius = UDim.new(0, 25)
+    MobileCorner.Parent = MobileToggle
 
-  local MobileStroke = Instance.new("UIStroke")
-   MobileStroke.Color = Color3.fromRGB(255, 30, 60)
-  MobileStroke.Thickness = 2
-   MobileStroke.Parent = MobileToggle
+    local MobileStroke = Instance.new("UIStroke")
+    MobileStroke.Color = Color3.fromRGB(255, 30, 60)
+    MobileStroke.Thickness = 2
+    MobileStroke.Parent = MobileToggle
 
-MobileToggle.MouseButton1Click:Connect(function()
-    openState = not openState
-    MainFrame.Visible = openState
-end)
+    MobileToggle.MouseButton1Click:Connect(function()
+        openState = not openState
+        MainFrame.Visible = openState
+    end)
 
     local tabs = {}
     local firstTab = true
@@ -370,7 +375,7 @@ end)
                 ItemBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
                 ItemBtn.Font = Enum.Font.Gotham
                 ItemBtn.TextSize = 11
-                ItemBtn.Parent = ItemsScroll  -- ĐÃ SỬA LỖI TẠI ĐÂY (Trước kia là ItemBtn.Parent = ItemBtn)
+                ItemBtn.Parent = ItemsScroll
 
                 ItemBtn.MouseButton1Click:Connect(function()
                     MainBtn.Text = "  " .. dropText .. " : " .. tostring(itemValue)
@@ -471,6 +476,14 @@ end)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     holding = false
                 end
+            end)
+        end
+
+        return elements
+    end
+
+    return tabs
+end      end
             end)
         end
 
