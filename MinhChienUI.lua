@@ -115,7 +115,7 @@ function RedzUiEngine:CreateWindow()
     MobileCorner.Parent = MobileToggle
 
     local MobileStroke = Instance.new("UIStroke")
-    MobileStroke.Color = Color3.fromRGB(255, 30, 60)
+    MobileStroke.Color = Color3.fromRGB(255, 255, 255)
     MobileStroke.Thickness = 2
     MobileStroke.Parent = MobileToggle
 
